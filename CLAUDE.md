@@ -11,6 +11,10 @@ Claude Code Router is a tool that routes Claude Code requests to different LLM p
 - **shared** (`@CCR/shared`): Shared constants, utilities, and preset management
 - **ui** (`@CCR/ui`): Web management interface (React + Vite)
 
+## Subtree Context
+
+This directory is the upstream CCR subtree inside the enterprise gateway repository. Prefer the parent repository's `config/custom-router.js` and `config/ccr-config.json` for enterprise integration changes; edit files under `ccr/` only when changing upstream CCR behavior.
+
 ## Build Commands
 
 ### Build all packages
@@ -39,7 +43,7 @@ pnpm release        # Build and publish all packages
 
 ## Core Architecture
 
-### 1. Routing System (packages/server/src/utils/router.ts)
+### 1. Routing System (packages/core/src/utils/router.ts)
 
 The routing logic determines which model a request should be sent to:
 
@@ -232,7 +236,7 @@ ui (standalone frontend application)
 
 ## Development Notes
 
-1. **Node.js version**: Requires >= 18.0.0
+1. **Node.js version**: Requires >= 20.0.0
 2. **Package manager**: Uses pnpm (monorepo depends on workspace protocol)
 3. **TypeScript**: All packages use TypeScript, but UI package is ESM module
 4. **Build tools**:
