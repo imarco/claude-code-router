@@ -236,6 +236,10 @@ export const router = async (req: any, _res: any, context: RouterContext) => {
     system[1].text = `${prompt}<env>${system[1].text.split("<env>").pop()}`;
   }
 
+  // Fail-closed flag for custom router errors — declared outside the try so
+  // the catch block can read it. See comment at the custom router block.
+  let customRouterFailed = false;
+
   try {
     // Try to get tokenizer config for the current model
     const [providerName, modelName] = req.body.model.split(",");
@@ -268,6 +272,11 @@ export const router = async (req: any, _res: any, context: RouterContext) => {
 
     let model;
     const customRouterPath = configService.get("CUSTOM_ROUTER_PATH");
+    // Fail-closed: when a custom router is configured (enterprise mode), an
+    // error loading/running it must surface as a request failure rather than
+    // silently falling back to Router.default — otherwise requests route to a
+    // provider that may lack the right key/model (e.g. aliases file missing
+    // because provider-mgmt hasn't synced).
     if (customRouterPath) {
       try {
         const customRouter = require(customRouterPath);
@@ -277,6 +286,8 @@ export const router = async (req: any, _res: any, context: RouterContext) => {
         });
       } catch (e: any) {
         req.log.error(`failed to load custom router: ${e.message}`);
+        customRouterFailed = true;
+        throw e;
       }
     }
     if (!model) {
@@ -289,6 +300,11 @@ export const router = async (req: any, _res: any, context: RouterContext) => {
     }
     req.body.model = model;
   } catch (error: any) {
+    // Custom router failures are fail-closed: rethrow so the request fails
+    // instead of being mis-routed to the default provider.
+    if (customRouterFailed) {
+      throw error;
+    }
     req.log.error(`Error in router middleware: ${error.message}`);
     const Router = configService.get("Router");
     req.body.model = Router?.default;
